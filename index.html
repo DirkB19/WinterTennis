@@ -77,6 +77,9 @@ main{padding:4px 10px 24px}
 .cell.blocked,.court.allblocked{color:var(--blocked-ink);justify-content:center;font-size:12px;
   background:repeating-linear-gradient(45deg,var(--blocked),var(--blocked) 6px,transparent 6px,transparent 12px)}
 .court.allblocked{align-items:center;justify-content:center;min-height:184px;border-style:dashed}
+.court.na{align-items:center;justify-content:center;min-height:184px;background:transparent;border:1px dashed var(--line);
+  color:var(--blocked-ink);font-size:12px;text-align:center}
+.cell.na{color:var(--blocked-ink);justify-content:center;font-size:12px;background:var(--blocked)}
 .slot.past{opacity:.5}
 .slot.past .cell{cursor:default}
 .slot.past .cell{min-height:26px}
@@ -380,13 +383,14 @@ function render(){
       '<div class="slot-time"><span>' + esc(s.t) + '</span><small>' +
       (s.past ? 'voorbij' : (free ? free + ' vrij' : 'volzet')) + '</small></div><div class="grid">';
     s.c.forEach(function(court, ci){
-      var allBlocked = court.every(function(v){ return v === 1; });
-      if (allBlocked) { html += '<div class="court allblocked">Geblokkeerd</div>'; return; }
+      if (court.every(function(v){ return v === 2; })) { html += '<div class="court na">Niet<br>beschikbaar</div>'; return; }
+      if (court.every(function(v){ return v === 1 || v === 2; })) { html += '<div class="court allblocked">Geblokkeerd</div>'; return; }
       html += '<div class="court">';
       court.forEach(function(v, pi){
         var attrs = ' data-k="' + esc(s.k) + '" data-c="' + ci + '" data-p="' + pi + '"';
         if (v === 0) html += '<button type="button" class="cell free"' + attrs + '>' + (s.past ? '' : '+ vrij') + '</button>';
         else if (v === 1) html += '<div class="cell blocked">—</div>';
+        else if (v === 2) html += '<div class="cell na">n.v.t.</div>';
         else html += '<button type="button" class="cell taken' + (v.me ? ' me' : '') + (v.o ? ' orange' : '') + '"' + attrs + '>' + esc(disp(v.n)) + '</button>';
       });
       html += '</div>';
@@ -442,7 +446,7 @@ function slotByKey(k){ for (var i = 0; i < D.slots.length; i++) if (D.slots[i].k
 function countOf(name){ var id = norm(name); for (var i = 0; i < D.members.length; i++) if (norm(D.members[i].n) === id) return D.members[i].c; return 0; }
 function inSlot(slot, name){
   var id = norm(name);
-  return slot.c.some(function(court){ return court.some(function(v){ return v && v !== 1 && norm(v.n) === id; }); });
+  return slot.c.some(function(court){ return court.some(function(v){ return v && v.n && norm(v.n) === id; }); });
 }
 function whyNot(slot, name){
   if (inSlot(slot, name)) return 'staat al op dit uur';
@@ -467,7 +471,7 @@ function onCellTap(btn){
   if (!slot || slot.past) return;
   var ci = +btn.getAttribute('data-c'), pi = +btn.getAttribute('data-p');
   var v = slot.c[ci][pi];
-  if (v === 1) return;
+  if (v === 1 || v === 2) return;
   var where = esc(D.courts[ci]) + ' · ' + esc(fmtLong(slot.d)) + ' · ' + esc(slot.t);
   if (v === 0) sheetFree(slot, ci, pi, where);
   else sheetTaken(slot, ci, pi, v, where);
@@ -489,7 +493,7 @@ function sheetFree(slot, ci, pi, where){
 }
 
 function sheetTaken(slot, ci, pi, v, where){
-  var inCourt = slot.c[ci].some(function(x){ return x && x !== 1 && x.me; });
+  var inCourt = slot.c[ci].some(function(x){ return x && x.me; });
   var html = '<h2>' + esc(disp(v.n)) + '</h2><div class="sub">' + where + '</div>';
   var actions = '';
   if (v.o && !v.me) {
