@@ -87,6 +87,20 @@ main{padding:4px 10px 24px}
 .legend i{display:inline-block;width:14px;height:14px;border-radius:4px}
 .empty{color:var(--muted);text-align:center;padding:40px 10px}
 
+/* mail preferences */
+.prefs{margin:22px 10px calc(28px + env(safe-area-inset-bottom));background:var(--card);border:1px solid var(--line);border-radius:14px;padding:6px 14px}
+.prefs h3{margin:10px 0 2px;font-size:14px}
+.prefs .to{font-size:12px;color:var(--muted);margin-bottom:4px;overflow-wrap:anywhere}
+.pref{display:flex;align-items:flex-start;gap:12px;padding:12px 0;border-top:1px solid var(--line);cursor:pointer}
+.pref:first-of-type{border-top:0}
+.pref input{appearance:none;-webkit-appearance:none;flex:0 0 26px;width:26px;height:26px;margin:0;border-radius:7px;
+  border:2px solid var(--muted);background:var(--card);display:grid;place-content:center;cursor:pointer}
+.pref input:checked{background:var(--brand);border-color:var(--brand)}
+.pref input:checked::after{content:"";width:7px;height:13px;border:solid #fff;border-width:0 3px 3px 0;transform:translateY(-2px) rotate(45deg)}
+.pref input:disabled{opacity:.4}
+.pref b{display:block;font-size:15px}
+.pref small{display:block;color:var(--muted);font-size:12.5px;margin-top:2px}
+
 /* bottom sheet */
 .backdrop{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:20;opacity:0;pointer-events:none;transition:opacity .18s}
 .backdrop.open{opacity:1;pointer-events:auto}
@@ -158,6 +172,15 @@ main{padding:4px 10px 24px}
     <div class="courthead" id="courtHead"></div>
   </header>
   <main id="day"></main>
+  <section class="prefs" id="prefs" hidden>
+    <h3>Meldingen</h3>
+    <div class="to" id="prefTo"></div>
+    <label class="pref">
+      <input type="checkbox" id="prefUpd">
+      <span><b>Update reservering via mail</b>
+      <small>Mail wanneer iemand je inschrijft of verwijdert, of wanneer iemand zich bij jouw veld en uur inschrijft of afmeldt.</small></span>
+    </label>
+  </section>
 </div>
 
 <!-- ============ REGISTER / INVALID / ERROR ============ -->
@@ -235,7 +258,7 @@ function ymdDate(s){ var p = s.split('-'); return new Date(+p[0], +p[1]-1, +p[2]
 function fmtLong(s){ var d = ymdDate(s); return DOW[d.getDay()] + ' ' + d.getDate() + ' ' + MON[d.getMonth()]; }
 function fmtShort(s){ var d = ymdDate(s); return DOW[d.getDay()].slice(0,2) + ' ' + d.getDate() + ' ' + MONS[d.getMonth()]; }
 
-var FN = { apiGetData: 'getData', apiBook: 'book', apiTakeOver: 'takeOver', apiRemove: 'remove', apiRegister: 'register' };
+var FN = { apiGetData: 'getData', apiBook: 'book', apiTakeOver: 'takeOver', apiRemove: 'remove', apiRegister: 'register', apiSetPrefs: 'setPrefs' };
 
 /**
  * Calls the Apps Script backend. text/plain keeps it a "simple" CORS request (no preflight);
@@ -376,6 +399,33 @@ function render(){
     '<span><i style="background:var(--orange);box-shadow:inset 3px 0 0 var(--orange-line)"></i>2de reservatie – overneembaar</span>' +
     '<span><i style="background:var(--blocked)"></i>geblokkeerd</span></div>';
   $('day').innerHTML = html;
+  renderPrefs();
+}
+
+/* ---------------- mail preferences ---------------- */
+
+var prefsBusy = false;
+function renderPrefs(){
+  var p = D.prefs;
+  if (!p) { $('prefs').hidden = true; return; }
+  $('prefs').hidden = false;
+  if (prefsBusy) return;
+  var hasMail = !!p.email;
+  $('prefTo').textContent = hasMail ? 'Naar ' + p.email : 'Er is nog geen e-mailadres van jou gekend. Vraag de beheerder het toe te voegen.';
+  $('prefUpd').checked = hasMail && p.updates;
+  $('prefUpd').disabled = !hasMail;
+}
+
+function savePrefs(){
+  var upd = $('prefUpd').checked;
+  prefsBusy = true;
+  $('prefUpd').disabled = true;
+  run('apiSetPrefs', TOKEN, upd).then(function(r){
+    if (r && r.ok && r.prefs) { D.prefs = r.prefs; toast(r.msg); }
+    else { toast((r && r.msg) || 'Niet opgeslagen', true); if (r && r.fatal) { store('del'); showMessage('Link niet geldig', r.msg); } }
+  }).catch(function(e){
+    toast('Niet opgeslagen: ' + (e.message || e), true);
+  }).then(function(){ prefsBusy = false; renderPrefs(); });
 }
 
 function go(delta){
@@ -615,6 +665,7 @@ $('todayBtn').onclick = function(){
   if (i >= 0) { dayIdx = i; render(); }
 };
 $('meChip').onclick = sheetMine;
+$('prefUpd').onchange = savePrefs;
 $('backdrop').onclick = closeSheet;
 
 (function swipe(){
