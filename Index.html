@@ -1,0 +1,691 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Wintertennis</title>
+<meta name="theme-color" content="#1f6b47">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Wintertennis">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon-180.png">
+<script src="config.js"></script>
+<style>
+:root{
+  --bg:#f3f5f2; --card:#ffffff; --ink:#1b2320; --muted:#68736d; --line:#dde3df;
+  --brand:#1f6b47; --brand2:#174f35;
+  --free:#eaf5ee; --free-ink:#1f6b47;
+  --me:#dbe8ff; --me-ink:#1d3a80;
+  --orange:#fde4c8; --orange-ink:#8f4204; --orange-line:#f08c1a;
+  --blocked:#e6e9e7; --blocked-ink:#9aa29e;
+  --danger:#fde2e1; --danger-ink:#9b1c1c;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#101513; --card:#19201c; --ink:#e6ece8; --muted:#97a39c; --line:#2a332e;
+    --brand:#1f6b47; --brand2:#164a32;
+    --free:#14261c; --free-ink:#74d3a1;
+    --me:#1b2a47; --me-ink:#bdd2ff;
+    --orange:#3b2611; --orange-ink:#ffc684; --orange-line:#f08c1a;
+    --blocked:#20272a; --blocked-ink:#66706b;
+    --danger:#3a1717; --danger-ink:#ffb4b4;
+  }
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);
+  font:15px/1.35 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  -webkit-tap-highlight-color:transparent}
+button{font:inherit;color:inherit;cursor:pointer}
+[hidden]{display:none!important}
+
+/* header */
+.top{position:sticky;top:0;z-index:5;background:var(--brand);color:#fff;
+  padding:calc(10px + env(safe-area-inset-top)) 12px 0;box-shadow:0 2px 8px rgba(0,0,0,.15)}
+.top-row{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.club{font-weight:700;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.testbadge{font-size:11px;font-weight:700;background:#f08c1a;color:#fff;border-radius:6px;padding:2px 6px;margin-left:6px}
+.mechip{border:0;border-radius:999px;background:rgba(255,255,255,.18);color:#fff;padding:6px 11px;font-size:13px;white-space:nowrap}
+.mechip b{font-weight:700}
+.daynav{display:flex;align-items:center;gap:8px;padding:10px 0 8px}
+.navbtn{flex:0 0 46px;height:46px;border:0;border-radius:12px;background:rgba(255,255,255,.16);color:#fff;font-size:28px;line-height:1}
+.navbtn:disabled{opacity:.25}
+.daylabel{flex:1;text-align:center;min-width:0}
+.dow{font-size:13px;opacity:.85}
+.date{font-size:20px;font-weight:700}
+.todaylink{border:0;background:none;color:#fff;font-size:12px;text-decoration:underline;opacity:.9;padding:2px 6px}
+.courthead{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;padding:6px 0 8px;font-size:12px;font-weight:700;text-align:center;letter-spacing:.02em}
+.courthead div{background:rgba(255,255,255,.12);border-radius:8px;padding:4px 0}
+
+/* day */
+main{padding:4px 10px 24px}
+.slot{margin-top:12px}
+.slot-time{display:flex;align-items:baseline;justify-content:space-between;margin:0 2px 5px;font-weight:700;font-size:15px}
+.slot-time small{font-weight:400;color:var(--muted);font-size:12px}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.court{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:4px;display:flex;flex-direction:column;gap:4px;min-width:0}
+.cell{min-height:42px;border:0;border-radius:8px;padding:4px 6px;font-size:12.5px;line-height:1.15;text-align:left;
+  display:flex;align-items:center;background:transparent;word-break:break-word;overflow-wrap:anywhere}
+.cell.taken{background:var(--bg)}
+.cell.free{background:var(--free);color:var(--free-ink);justify-content:center;font-weight:600;font-size:13px;
+  outline:1px dashed color-mix(in srgb,var(--free-ink) 45%,transparent);outline-offset:-1px}
+.cell.me{background:var(--me);color:var(--me-ink);font-weight:700}
+.cell.orange{background:var(--orange);color:var(--orange-ink);box-shadow:inset 3px 0 0 var(--orange-line)}
+.cell.orange.me{font-weight:700}
+.cell.blocked,.court.allblocked{color:var(--blocked-ink);justify-content:center;font-size:12px;
+  background:repeating-linear-gradient(45deg,var(--blocked),var(--blocked) 6px,transparent 6px,transparent 12px)}
+.court.allblocked{align-items:center;justify-content:center;min-height:184px;border-style:dashed}
+.slot.past{opacity:.5}
+.slot.past .cell{cursor:default}
+.slot.past .cell{min-height:26px}
+.slot.past .cell.free{background:transparent;outline:none;color:var(--muted);font-weight:400}
+
+.legend{display:flex;flex-wrap:wrap;gap:6px 12px;margin:22px 2px 0;font-size:12px;color:var(--muted)}
+.legend span{display:inline-flex;align-items:center;gap:5px}
+.legend i{display:inline-block;width:14px;height:14px;border-radius:4px}
+.empty{color:var(--muted);text-align:center;padding:40px 10px}
+
+/* mail preferences */
+.prefs{margin:22px 10px calc(28px + env(safe-area-inset-bottom));background:var(--card);border:1px solid var(--line);border-radius:14px;padding:6px 14px}
+.prefs h3{margin:10px 0 2px;font-size:14px}
+.prefs .to{font-size:12px;color:var(--muted);margin-bottom:4px;overflow-wrap:anywhere}
+.pref{display:flex;align-items:flex-start;gap:12px;padding:12px 0;border-top:1px solid var(--line);cursor:pointer}
+.pref:first-of-type{border-top:0}
+.pref input{appearance:none;-webkit-appearance:none;flex:0 0 26px;width:26px;height:26px;margin:0;border-radius:7px;
+  border:2px solid var(--muted);background:var(--card);display:grid;place-content:center;cursor:pointer}
+.pref input:checked{background:var(--brand);border-color:var(--brand)}
+.pref input:checked::after{content:"";width:7px;height:13px;border:solid #fff;border-width:0 3px 3px 0;transform:translateY(-2px) rotate(45deg)}
+.pref input:disabled{opacity:.4}
+.pref b{display:block;font-size:15px}
+.pref small{display:block;color:var(--muted);font-size:12.5px;margin-top:2px}
+
+/* bottom sheet */
+.backdrop{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:20;opacity:0;pointer-events:none;transition:opacity .18s}
+.backdrop.open{opacity:1;pointer-events:auto}
+.sheet{position:fixed;left:0;right:0;bottom:0;z-index:21;background:var(--card);border-radius:18px 18px 0 0;
+  padding:10px 16px calc(18px + env(safe-area-inset-bottom));max-height:88vh;overflow:auto;
+  transform:translateY(105%);transition:transform .2s ease-out;box-shadow:0 -6px 24px rgba(0,0,0,.2)}
+.sheet.open{transform:none}
+.grab{width:40px;height:4px;border-radius:2px;background:var(--line);margin:0 auto 10px}
+.sheet h2{margin:0;font-size:19px}
+.sub{color:var(--muted);font-size:13px;margin-top:3px}
+.note{margin-top:12px;padding:10px 12px;border-radius:10px;background:var(--bg);font-size:14px}
+.note.orange{background:var(--orange);color:var(--orange-ink)}
+.btn{display:block;width:100%;min-height:50px;border:0;border-radius:12px;padding:12px;font-weight:600;font-size:16px;
+  margin-top:10px;background:var(--brand);color:#fff}
+.btn.secondary{background:var(--free);color:var(--free-ink)}
+.btn.danger{background:var(--danger);color:var(--danger-ink)}
+.btn.ghost{background:transparent;color:var(--muted);min-height:44px}
+.btn:disabled{opacity:.4}
+.hint{font-size:13px;color:var(--muted);margin-top:5px;text-align:center}
+.search{width:100%;margin-top:12px;font-size:16px;padding:11px 12px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink)}
+.plist{margin-top:6px;max-height:42vh;overflow:auto;border-top:1px solid var(--line)}
+.pitem{display:flex;justify-content:space-between;align-items:center;gap:8px;width:100%;padding:13px 6px;border:0;border-bottom:1px solid var(--line);background:none;text-align:left;font-size:15px}
+.pitem small{color:var(--muted);font-size:12px;white-space:nowrap}
+.pitem.sel{background:var(--free);color:var(--free-ink);font-weight:700}
+.pitem:disabled{opacity:.4}
+.mine{margin-top:10px}
+.mine button{display:flex;justify-content:space-between;width:100%;padding:13px 10px;border:0;border-radius:10px;background:var(--bg);margin-top:6px;text-align:left}
+.mine button.o{background:var(--orange);color:var(--orange-ink)}
+
+/* toast + busy */
+.toast{position:fixed;left:12px;right:12px;bottom:calc(14px + env(safe-area-inset-bottom));z-index:40;padding:12px 14px;border-radius:12px;
+  background:#1b2320;color:#fff;font-size:14px;box-shadow:0 6px 20px rgba(0,0,0,.25);transform:translateY(160%);transition:transform .2s}
+.toast.show{transform:none}
+.toast.err{background:#9b1c1c}
+.busy{position:fixed;inset:0;z-index:30;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.12)}
+.spin{width:38px;height:38px;border-radius:50%;border:4px solid rgba(255,255,255,.6);border-top-color:var(--brand);animation:sp .8s linear infinite;background:var(--card)}
+@keyframes sp{to{transform:rotate(360deg)}}
+
+/* register / messages */
+.page{max-width:520px;margin:0 auto;padding:22px 16px 40px}
+.page h1{font-size:22px;margin:4px 0 8px}
+.page p{color:var(--muted)}
+.field{margin-top:16px}
+.field label{display:block;font-weight:600;font-size:14px;margin-bottom:6px}
+.field input{width:100%;font-size:16px;padding:12px;border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--ink)}
+.chosen{margin-top:8px;font-size:14px}
+.result{margin-top:16px;padding:12px;border-radius:10px;background:var(--free);color:var(--free-ink)}
+.result.err{background:var(--danger);color:var(--danger-ink)}
+</style>
+</head>
+<body>
+
+<!-- ============ APP ============ -->
+<div id="app" hidden>
+  <header class="top">
+    <div class="top-row">
+      <div class="club"><span id="clubName">Wintertennis</span><span id="testBadge" class="testbadge" hidden>TEST</span></div>
+      <button id="meChip" class="mechip" type="button"></button>
+    </div>
+    <nav class="daynav">
+      <button id="prevBtn" class="navbtn" type="button" aria-label="Vorige dag">&#8249;</button>
+      <div class="daylabel">
+        <div class="dow" id="dowLabel"></div>
+        <div class="date" id="dateLabel"></div>
+        <button id="todayBtn" class="todaylink" type="button" hidden>naar vandaag</button>
+      </div>
+      <button id="nextBtn" class="navbtn" type="button" aria-label="Volgende dag">&#8250;</button>
+    </nav>
+    <div class="courthead" id="courtHead"></div>
+  </header>
+  <main id="day"></main>
+  <section class="prefs" id="prefs" hidden>
+    <h3>Meldingen</h3>
+    <div class="to" id="prefTo"></div>
+    <label class="pref">
+      <input type="checkbox" id="prefUpd">
+      <span><b>Update reservering via mail</b>
+      <small>Mail wanneer iemand je inschrijft of verwijdert, of wanneer iemand zich bij jouw veld en uur inschrijft of afmeldt.</small></span>
+    </label>
+  </section>
+</div>
+
+<!-- ============ REGISTER / INVALID / ERROR ============ -->
+<div id="regPage" class="page" hidden>
+  <h1 id="regTitle">Persoonlijke link aanvragen</h1>
+  <p id="regIntro">Kies je naam en vul je e-mailadres in. Je krijgt een persoonlijke link waarmee je kan reserveren.</p>
+  <div id="regForm">
+    <div class="field">
+      <label for="regSearch">Je naam</label>
+      <input id="regSearch" type="search" placeholder="Zoek je naam…" autocomplete="off">
+      <div class="plist" id="regList"></div>
+      <div class="chosen" id="regChosen"></div>
+    </div>
+    <div class="field">
+      <label for="regEmail">Je e-mailadres</label>
+      <input id="regEmail" type="email" inputmode="email" autocomplete="email" placeholder="naam@voorbeeld.be">
+    </div>
+    <button id="regBtn" class="btn" type="button" disabled>Stuur mijn link</button>
+  </div>
+  <div id="regResult" class="result" hidden></div>
+</div>
+
+<div id="msgPage" class="page" hidden>
+  <h1 id="msgTitle"></h1>
+  <p id="msgText"></p>
+  <button class="btn secondary" type="button" onclick="location.reload()">Opnieuw proberen</button>
+</div>
+
+<!-- ============ OVERLAYS ============ -->
+<div id="backdrop" class="backdrop"></div>
+<div id="sheet" class="sheet" role="dialog" aria-modal="true"></div>
+<div id="toast" class="toast"></div>
+<div id="busy" class="busy" hidden><div class="spin"></div></div>
+
+<script>
+/* ---------------- config + token ---------------- */
+
+var CFG = window.APP_CONFIG || {};
+var API_URL = CFG.API_URL || '';
+var TOKEN_KEY = 'wt_token';
+
+function store(op, v){
+  try {
+    if (op === 'get') return localStorage.getItem(TOKEN_KEY) || '';
+    if (op === 'set') localStorage.setItem(TOKEN_KEY, v);
+    if (op === 'del') localStorage.removeItem(TOKEN_KEY);
+  } catch (e) {}
+  return '';
+}
+
+/** Token from the link (?k=…); remembered so a home-screen icon without ?k also works. */
+var TOKEN = (function(){
+  var k = '';
+  try { k = new URLSearchParams(location.search).get('k') || ''; } catch (e) {}
+  k = /^[A-Za-z0-9]{16,64}$/.test(k) ? k : '';
+  if (k) store('set', k);
+  return k || store('get');
+})();
+
+var D = null;          // data from server
+var days = [];         // sorted unique dates (yyyy-MM-dd)
+var dayIdx = 0;
+var lastLoad = 0;
+var busyCount = 0;
+
+var DOW = ['zondag','maandag','dinsdag','woensdag','donderdag','vrijdag','zaterdag'];
+var MON = ['januari','februari','maart','april','mei','juni','juli','augustus','september','oktober','november','december'];
+var MONS = ['jan','feb','mrt','apr','mei','jun','jul','aug','sep','okt','nov','dec'];
+
+function $(id){ return document.getElementById(id); }
+function disp(n){ return String(n == null ? '' : n).replace(/\s+/g,' ').trim(); }
+function norm(s){ return disp(s).normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase(); }
+function esc(s){ return String(s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+function ymdDate(s){ var p = s.split('-'); return new Date(+p[0], +p[1]-1, +p[2]); }
+function fmtLong(s){ var d = ymdDate(s); return DOW[d.getDay()] + ' ' + d.getDate() + ' ' + MON[d.getMonth()]; }
+function fmtShort(s){ var d = ymdDate(s); return DOW[d.getDay()].slice(0,2) + ' ' + d.getDate() + ' ' + MONS[d.getMonth()]; }
+
+var FN = { apiGetData: 'getData', apiBook: 'book', apiTakeOver: 'takeOver', apiRemove: 'remove', apiRegister: 'register', apiSetPrefs: 'setPrefs' };
+
+/**
+ * Calls the Apps Script backend. text/plain keeps it a "simple" CORS request (no preflight);
+ * fetch follows Google's redirect to the response automatically.
+ */
+function run(fn){
+  var args = Array.prototype.slice.call(arguments, 1);
+  if (!API_URL) return Promise.reject(new Error('API_URL ontbreekt in config.js'));
+  var ctrl = ('AbortController' in window) ? new AbortController() : null;
+  var timer = ctrl ? setTimeout(function(){ ctrl.abort(); }, 30000) : null;
+  return fetch(API_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify({ fn: FN[fn] || fn, args: args }),
+    redirect: 'follow',
+    cache: 'no-store',
+    signal: ctrl ? ctrl.signal : undefined
+  }).then(function(r){
+    if (!r.ok) throw new Error('Server antwoordt niet (' + r.status + ')');
+    return r.text();
+  }).then(function(t){
+    try { return JSON.parse(t); }
+    catch (e) { throw new Error('Onverwacht antwoord van de server. Probeer opnieuw.'); }
+  }).catch(function(e){
+    if (e && e.name === 'AbortError') throw new Error('De server reageert traag. Probeer opnieuw.');
+    if (e instanceof TypeError) throw new Error('Geen verbinding met de server. Controleer je internet.');
+    throw e;
+  }).then(function(v){ if (timer) clearTimeout(timer); return v; },
+          function(e){ if (timer) clearTimeout(timer); throw e; });
+}
+
+function setBusy(on){
+  busyCount += on ? 1 : -1;
+  if (busyCount < 0) busyCount = 0;
+  $('busy').hidden = busyCount === 0;
+}
+
+var toastTimer = null;
+function toast(msg, isErr){
+  if (!msg) return;
+  var t = $('toast');
+  t.textContent = msg;
+  t.className = 'toast show' + (isErr ? ' err' : '');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(function(){ t.className = 'toast' + (isErr ? ' err' : ''); }, isErr ? 5000 : 3200);
+}
+
+function showMessage(title, text){
+  $('app').hidden = true; $('regPage').hidden = true;
+  $('msgTitle').textContent = title; $('msgText').textContent = text;
+  $('msgPage').hidden = false;
+}
+
+/* ---------------- load ---------------- */
+
+function init(){
+  setBusy(true);
+  run('apiGetData', TOKEN).then(function(r){
+    if (!r || !r.ok) throw new Error(r && r.msg || 'Onbekende fout');
+    if (r.mode === 'app') { $('app').hidden = false; applyData(r.data, true); }
+    else showRegister(r);
+  }).catch(function(e){
+    showMessage('Er ging iets mis', e.message || String(e));
+  }).then(function(){ setBusy(false); });
+}
+
+function refresh(silent){
+  if (!silent) setBusy(true);
+  return run('apiGetData', TOKEN).then(function(r){
+    if (r && r.ok && r.mode === 'app') applyData(r.data, false);
+  }).catch(function(){}).then(function(){ if (!silent) setBusy(false); });
+}
+
+function applyData(data, first){
+  var keep = days[dayIdx];
+  D = data;
+  lastLoad = Date.now();
+  var seen = {};
+  days = [];
+  D.slots.forEach(function(s){ if (!seen[s.d]) { seen[s.d] = 1; days.push(s.d); } });
+  days.sort();
+  if (first || !keep || days.indexOf(keep) < 0) {
+    dayIdx = days.findIndex(function(d){ return d >= D.today; });
+    if (dayIdx < 0) dayIdx = days.length - 1;
+  } else {
+    dayIdx = days.indexOf(keep);
+  }
+  render();
+}
+
+/* ---------------- render ---------------- */
+
+function render(){
+  if (!D) return;
+  $('clubName').textContent = D.club;
+  document.title = D.club;
+  $('testBadge').hidden = !D.test;
+  if (D.test) $('testBadge').textContent = 'TEST · ' + D.nowLabel;
+  $('meChip').innerHTML = esc(disp(D.me).split(' ')[0]) + ' · <b>' + D.mine.length + '/' + D.max + '</b>';
+
+  var day = days[dayIdx];
+  $('prevBtn').disabled = dayIdx <= 0;
+  $('nextBtn').disabled = dayIdx >= days.length - 1;
+  if (!day) { $('day').innerHTML = '<div class="empty">Geen speelmomenten gevonden.</div>'; return; }
+  var d = ymdDate(day);
+  $('dowLabel').textContent = DOW[d.getDay()] + (day === D.today ? ' · vandaag' : '');
+  $('dateLabel').textContent = d.getDate() + ' ' + MON[d.getMonth()] + ' ' + d.getFullYear();
+  var todayIdx = days.findIndex(function(x){ return x >= D.today; });
+  $('todayBtn').hidden = todayIdx < 0 || todayIdx === dayIdx;
+
+  $('courtHead').innerHTML = D.courts.map(function(c){ return '<div>' + esc(c) + '</div>'; }).join('');
+
+  var html = '';
+  D.slots.forEach(function(s){
+    if (s.d !== day) return;
+    var free = 0;
+    s.c.forEach(function(court){ court.forEach(function(v){ if (v === 0) free++; }); });
+    html += '<section class="slot' + (s.past ? ' past' : '') + '">' +
+      '<div class="slot-time"><span>' + esc(s.t) + '</span><small>' +
+      (s.past ? 'voorbij' : (free ? free + ' vrij' : 'volzet')) + '</small></div><div class="grid">';
+    s.c.forEach(function(court, ci){
+      var allBlocked = court.every(function(v){ return v === 1; });
+      if (allBlocked) { html += '<div class="court allblocked">Geblokkeerd</div>'; return; }
+      html += '<div class="court">';
+      court.forEach(function(v, pi){
+        var attrs = ' data-k="' + esc(s.k) + '" data-c="' + ci + '" data-p="' + pi + '"';
+        if (v === 0) html += '<button type="button" class="cell free"' + attrs + '>' + (s.past ? '' : '+ vrij') + '</button>';
+        else if (v === 1) html += '<div class="cell blocked">—</div>';
+        else html += '<button type="button" class="cell taken' + (v.me ? ' me' : '') + (v.o ? ' orange' : '') + '"' + attrs + '>' + esc(disp(v.n)) + '</button>';
+      });
+      html += '</div>';
+    });
+    html += '</div></section>';
+  });
+  html += '<div class="legend">' +
+    '<span><i style="background:var(--free)"></i>vrij</span>' +
+    '<span><i style="background:var(--me)"></i>jij</span>' +
+    '<span><i style="background:var(--orange);box-shadow:inset 3px 0 0 var(--orange-line)"></i>2de reservatie – overneembaar</span>' +
+    '<span><i style="background:var(--blocked)"></i>geblokkeerd</span></div>';
+  $('day').innerHTML = html;
+  renderPrefs();
+}
+
+/* ---------------- mail preferences ---------------- */
+
+var prefsBusy = false;
+function renderPrefs(){
+  var p = D.prefs;
+  if (!p) { $('prefs').hidden = true; return; }
+  $('prefs').hidden = false;
+  if (prefsBusy) return;
+  var hasMail = !!p.email;
+  $('prefTo').textContent = hasMail ? 'Naar ' + p.email : 'Er is nog geen e-mailadres van jou gekend. Vraag de beheerder het toe te voegen.';
+  $('prefUpd').checked = hasMail && p.updates;
+  $('prefUpd').disabled = !hasMail;
+}
+
+function savePrefs(){
+  var upd = $('prefUpd').checked;
+  prefsBusy = true;
+  $('prefUpd').disabled = true;
+  run('apiSetPrefs', TOKEN, upd).then(function(r){
+    if (r && r.ok && r.prefs) { D.prefs = r.prefs; toast(r.msg); }
+    else { toast((r && r.msg) || 'Niet opgeslagen', true); if (r && r.fatal) { store('del'); showMessage('Link niet geldig', r.msg); } }
+  }).catch(function(e){
+    toast('Niet opgeslagen: ' + (e.message || e), true);
+  }).then(function(){ prefsBusy = false; renderPrefs(); });
+}
+
+function go(delta){
+  var n = dayIdx + delta;
+  if (n < 0 || n >= days.length) return;
+  dayIdx = n;
+  render();
+  window.scrollTo(0, 0);
+}
+
+/* ---------------- helpers on data ---------------- */
+
+function slotByKey(k){ for (var i = 0; i < D.slots.length; i++) if (D.slots[i].k === k) return D.slots[i]; return null; }
+function countOf(name){ var id = norm(name); for (var i = 0; i < D.members.length; i++) if (norm(D.members[i].n) === id) return D.members[i].c; return 0; }
+function inSlot(slot, name){
+  var id = norm(name);
+  return slot.c.some(function(court){ return court.some(function(v){ return v && v !== 1 && norm(v.n) === id; }); });
+}
+function whyNot(slot, name){
+  if (inSlot(slot, name)) return 'staat al op dit uur';
+  if (countOf(name) >= D.max) return countOf(name) + '/' + D.max + ' reservaties';
+  return '';
+}
+
+/* ---------------- bottom sheet ---------------- */
+
+function openSheet(html){
+  $('sheet').innerHTML = '<div class="grab"></div>' + html;
+  $('backdrop').classList.add('open');
+  $('sheet').classList.add('open');
+}
+function closeSheet(){
+  $('backdrop').classList.remove('open');
+  $('sheet').classList.remove('open');
+}
+
+function onCellTap(btn){
+  var slot = slotByKey(btn.getAttribute('data-k'));
+  if (!slot || slot.past) return;
+  var ci = +btn.getAttribute('data-c'), pi = +btn.getAttribute('data-p');
+  var v = slot.c[ci][pi];
+  if (v === 1) return;
+  var where = esc(D.courts[ci]) + ' · ' + esc(fmtLong(slot.d)) + ' · ' + esc(slot.t);
+  if (v === 0) sheetFree(slot, ci, pi, where);
+  else sheetTaken(slot, ci, pi, v, where);
+}
+
+function sheetFree(slot, ci, pi, where){
+  var why = whyNot(slot, D.me);
+  openSheet(
+    '<h2>Vrije plaats</h2><div class="sub">' + where + '</div>' +
+    '<button class="btn" type="button" id="bMe"' + (why ? ' disabled' : '') + '>Boek voor mij</button>' +
+    (why ? '<div class="hint">Jij: ' + esc(why) + '</div>' : '') +
+    '<button class="btn secondary" type="button" id="bOther">Boek voor iemand anders</button>' +
+    '<button class="btn ghost" type="button" id="bClose">Annuleren</button>');
+  $('bMe').onclick = function(){ act('apiBook', [slot.k, ci, pi, D.me]); };
+  $('bOther').onclick = function(){
+    picker('Boek voor…', where, slot, 'Boek', function(name){ act('apiBook', [slot.k, ci, pi, name]); });
+  };
+  $('bClose').onclick = closeSheet;
+}
+
+function sheetTaken(slot, ci, pi, v, where){
+  var inCourt = slot.c[ci].some(function(x){ return x && x !== 1 && x.me; });
+  var html = '<h2>' + esc(disp(v.n)) + '</h2><div class="sub">' + where + '</div>';
+  var actions = '';
+  if (v.o && !v.me) {
+    var why = whyNot(slot, D.me);
+    html += '<div class="note orange">Dit is de 2de reservatie van ' + esc(disp(v.n)) +
+      '. Iemand met minder dan ' + D.max + ' reservaties mag deze plaats overnemen.</div>';
+    actions += '<button class="btn" type="button" id="bTakeMe"' + (why ? ' disabled' : '') + '>Neem over voor mij</button>' +
+      (why ? '<div class="hint">Jij: ' + esc(why) + '</div>' : '') +
+      '<button class="btn secondary" type="button" id="bTakeOther">Neem over voor iemand anders</button>';
+  } else if (v.o && v.me) {
+    html += '<div class="note orange">Dit is jouw 2de reservatie: iemand met minder dan ' + D.max +
+      ' reservaties kan deze plaats nog overnemen.</div>';
+  }
+  if (inCourt) {
+    actions += '<button class="btn danger" type="button" id="bRemove">' +
+      (v.me ? 'Annuleer mijn plaats' : 'Verwijder ' + esc(disp(v.n))) + '</button>';
+  } else if (!v.o) {
+    html += '<div class="note">Enkel spelers van deze boeking kunnen namen verwijderen.</div>';
+  }
+  openSheet(html + actions + '<button class="btn ghost" type="button" id="bClose">Sluiten</button>');
+  $('bClose').onclick = closeSheet;
+  if ($('bTakeMe')) $('bTakeMe').onclick = function(){ act('apiTakeOver', [slot.k, ci, pi, v.n, D.me]); };
+  if ($('bTakeOther')) $('bTakeOther').onclick = function(){
+    picker('Overnemen voor…', where, slot, 'Neem over', function(name){ act('apiTakeOver', [slot.k, ci, pi, v.n, name]); });
+  };
+  if ($('bRemove')) {
+    var armed = false;
+    $('bRemove').onclick = function(){
+      if (!armed) { armed = true; this.textContent = 'Tik nogmaals om te bevestigen'; return; }
+      act('apiRemove', [slot.k, ci, pi, v.n]);
+    };
+  }
+}
+
+/** Member picker with search; disabled when the player is already on this hour or at max. */
+function picker(title, where, slot, verb, onPick){
+  openSheet('<h2>' + esc(title) + '</h2><div class="sub">' + where + '</div>' +
+    '<input class="search" id="pSearch" type="search" placeholder="Zoek een naam…" autocomplete="off">' +
+    '<div class="plist" id="pList"></div>' +
+    '<button class="btn" type="button" id="pOk" disabled>' + esc(verb) + '</button>' +
+    '<button class="btn ghost" type="button" id="bClose">Annuleren</button>');
+  var chosen = null;
+  function draw(){
+    var q = norm($('pSearch').value);
+    $('pList').innerHTML = D.members.filter(function(m){ return !q || norm(m.n).indexOf(q) >= 0; }).map(function(m){
+      var why = whyNot(slot, m.n);
+      return '<button type="button" class="pitem' + (chosen === m.n ? ' sel' : '') + '" data-n="' + esc(m.n) + '"' +
+        (why ? ' disabled' : '') + '><span>' + esc(disp(m.n)) + '</span><small>' +
+        esc(why || (m.c + '/' + D.max)) + '</small></button>';
+    }).join('') || '<div class="hint">Geen namen gevonden.</div>';
+  }
+  $('pSearch').oninput = draw;
+  $('pList').onclick = function(e){
+    var b = e.target.closest('.pitem');
+    if (!b || b.disabled) return;
+    chosen = b.getAttribute('data-n');
+    $('pOk').disabled = false;
+    $('pOk').textContent = verb + ': ' + disp(chosen);
+    draw();
+  };
+  $('pOk').onclick = function(){ if (chosen) onPick(chosen); };
+  $('bClose').onclick = closeSheet;
+  draw();
+}
+
+function sheetMine(){
+  var list = D.mine.length ? D.mine.map(function(b, i){
+    return '<button type="button" class="' + (b.o ? 'o' : '') + '" data-i="' + i + '"><span>' +
+      esc(fmtShort(b.d)) + ' · ' + esc(b.t) + '</span><span>' + esc(b.court) + (b.o ? ' · 2de' : '') + '</span></button>';
+  }).join('') : '<div class="note">Je hebt geen toekomstige reservaties.</div>';
+  openSheet('<h2>' + esc(disp(D.me)) + '</h2><div class="sub">Je toekomstige reservaties: ' + D.mine.length + ' / ' + D.max + '</div>' +
+    '<div class="mine" id="mineList">' + list + '</div>' +
+    '<button class="btn ghost" type="button" id="bClose">Sluiten</button>' +
+    '<button class="btn ghost" type="button" id="bForget" style="font-size:13px">Afmelden op dit toestel</button>');
+  $('bClose').onclick = closeSheet;
+  var forgetArmed = false;
+  $('bForget').onclick = function(){
+    if (!forgetArmed) { forgetArmed = true; this.textContent = 'Tik nogmaals: je hebt daarna je persoonlijke link opnieuw nodig'; return; }
+    store('del');
+    location.href = location.pathname;
+  };
+  $('mineList').onclick = function(e){
+    var b = e.target.closest('button[data-i]');
+    if (!b) return;
+    var idx = days.indexOf(D.mine[+b.getAttribute('data-i')].d);
+    if (idx >= 0) { dayIdx = idx; render(); }
+    closeSheet();
+  };
+}
+
+/* ---------------- actions ---------------- */
+
+function act(fn, args){
+  closeSheet();
+  setBusy(true);
+  run.apply(null, [fn, TOKEN].concat(args)).then(function(r){
+    if (r && r.data) applyData(r.data, false);
+    toast(r && r.msg, !(r && r.ok));
+    if (r && r.fatal) { store('del'); showMessage('Link niet geldig', r.msg); }
+  }).catch(function(e){
+    toast('Er ging iets mis: ' + (e.message || e), true);
+    return refresh(true);
+  }).then(function(){ setBusy(false); });
+}
+
+/* ---------------- registration ---------------- */
+
+function showRegister(r){
+  $('app').hidden = true;
+  if (r.mode === 'invalid') store('del');
+  if (r.club) document.title = r.club;
+  if (r.mode === 'invalid') {
+    $('regTitle').textContent = 'Deze link werkt niet (meer)';
+    $('regIntro').textContent = r.registration
+      ? 'Vraag hieronder een nieuwe persoonlijke link aan.'
+      : 'Vraag een nieuwe link aan bij de beheerder.';
+  }
+  if (!r.registration) {
+    $('regForm').hidden = true;
+    if (r.mode !== 'invalid') {
+      $('regTitle').textContent = 'Persoonlijke link nodig';
+      $('regIntro').textContent = 'Open de app via je persoonlijke link. Vraag die aan bij de beheerder.';
+    }
+  }
+  $('regPage').hidden = false;
+  if (!r.registration) return;
+
+  var chosen = null;
+  function draw(){
+    var q = norm($('regSearch').value);
+    if (q.length < 2) { $('regList').innerHTML = ''; return; }
+    $('regList').innerHTML = r.members.filter(function(m){ return norm(m).indexOf(q) >= 0; }).slice(0, 12).map(function(m){
+      return '<button type="button" class="pitem' + (chosen === m ? ' sel' : '') + '" data-n="' + esc(m) + '"><span>' + esc(disp(m)) + '</span></button>';
+    }).join('') || '<div class="hint">Geen naam gevonden. Typ je voor- of achternaam.</div>';
+  }
+  function check(){ $('regBtn').disabled = !(chosen && /\S+@\S+\.\S+/.test($('regEmail').value)); }
+  $('regSearch').oninput = draw;
+  $('regList').onclick = function(e){
+    var b = e.target.closest('.pitem'); if (!b) return;
+    chosen = b.getAttribute('data-n');
+    $('regChosen').innerHTML = 'Gekozen: <b>' + esc(disp(chosen)) + '</b>';
+    $('regSearch').value = ''; $('regList').innerHTML = '';
+    check();
+  };
+  $('regEmail').oninput = check;
+  $('regBtn').onclick = function(){
+    setBusy(true);
+    $('regBtn').disabled = true;
+    run('apiRegister', chosen, $('regEmail').value).then(function(res){
+      var box = $('regResult');
+      box.hidden = false;
+      box.className = 'result' + (res.ok ? '' : ' err');
+      box.textContent = res.msg;
+      if (res.ok) $('regForm').hidden = true; else check();
+    }).catch(function(e){
+      var box = $('regResult');
+      box.hidden = false; box.className = 'result err'; box.textContent = e.message || String(e);
+      check();
+    }).then(function(){ setBusy(false); });
+  };
+}
+
+/* ---------------- events ---------------- */
+
+$('day').addEventListener('click', function(e){
+  var b = e.target.closest('button.cell');
+  if (b) onCellTap(b);
+});
+$('prevBtn').onclick = function(){ go(-1); };
+$('nextBtn').onclick = function(){ go(1); };
+$('todayBtn').onclick = function(){
+  var i = days.findIndex(function(x){ return x >= D.today; });
+  if (i >= 0) { dayIdx = i; render(); }
+};
+$('meChip').onclick = sheetMine;
+$('prefUpd').onchange = savePrefs;
+$('backdrop').onclick = closeSheet;
+
+(function swipe(){
+  var x0 = null, y0 = null;
+  var el = $('day');
+  el.addEventListener('touchstart', function(e){ var t = e.touches[0]; x0 = t.clientX; y0 = t.clientY; }, { passive: true });
+  el.addEventListener('touchend', function(e){
+    if (x0 === null) return;
+    var t = e.changedTouches[0], dx = t.clientX - x0, dy = t.clientY - y0;
+    x0 = null;
+    if (Math.abs(dx) > 70 && Math.abs(dy) < 45) go(dx < 0 ? 1 : -1);
+  }, { passive: true });
+})();
+
+document.addEventListener('visibilitychange', function(){
+  if (!document.hidden && D && Date.now() - lastLoad > 30000) refresh(true);
+});
+setInterval(function(){ if (!document.hidden && D && !$('sheet').classList.contains('open')) refresh(true); }, 90000);
+
+init();
+</script>
+</body>
+</html>
