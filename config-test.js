@@ -3,6 +3,6 @@
  * Paste the /exec URL of the test copy's deployment below.
  */
 window.APP_CONFIG = {
-  API_URL: 'https://script.google.com/macros/s/PASTE_TEST_COPY_DEPLOYMENT_ID/exec',
+  API_URL: 'https://script.google.com/macros/s/AKfycbxv7jA9bWADD3ifX5SYSOTkNPkfFI6DTilVZ8T6xCWIWqaFpkj1ylpPYLo4fl1JRn_4/exec',
   STORAGE_KEY: 'wt_token_test'
 };
