@@ -116,6 +116,7 @@ main{padding:4px 10px 24px}
 .sub{color:var(--muted);font-size:13px;margin-top:3px}
 .note{margin-top:12px;padding:10px 12px;border-radius:10px;background:var(--bg);font-size:14px}
 .note.orange{background:var(--orange);color:var(--orange-ink)}
+.note.warn{background:var(--danger);color:var(--danger-ink)}
 .btn{display:block;width:100%;min-height:50px;border:0;border-radius:12px;padding:12px;font-weight:600;font-size:16px;
   margin-top:10px;background:var(--brand);color:#fff}
 .btn.secondary{background:var(--free);color:var(--free-ink)}
@@ -527,8 +528,9 @@ function sheetFree(slot, ci, pi, where){
   $('bClose').onclick = closeSheet;
 }
 
+function memberOf(name){ var id = norm(name); for (var i = 0; i < D.members.length; i++) if (norm(D.members[i].n) === id) return D.members[i]; return {}; }
+
 function sheetTaken(slot, ci, pi, v, where){
-  var inCourt = slot.c[ci].some(function(x){ return x && x.me; });
   var html = '<h2>' + esc(disp(v.n)) + '</h2><div class="sub">' + where + '</div>';
   var actions = '';
   if (v.o && !v.me) {
@@ -542,12 +544,19 @@ function sheetTaken(slot, ci, pi, v, where){
     html += '<div class="note orange">Dit is jouw overschrijfbare reservatie: iemand met minder dan ' + D.max +
       ' reservaties kan deze plaats nog overnemen.</div>';
   }
-  if (inCourt) {
-    actions += '<button class="btn danger" type="button" id="bRemove">' +
-      (v.me ? 'Annuleer mijn plaats' : 'Verwijder ' + esc(disp(v.n))) + '</button>';
-  } else if (!v.o) {
-    html += '<div class="note">Enkel spelers van deze boeking kunnen namen verwijderen.</div>';
+  var removeNote = '';
+  if (!v.me) {
+    var nm = memberOf(v.n).nm;
+    removeNote = '<div class="note">Je kan ' + esc(disp(v.n)) + ' hier weghalen. We gaan ervan uit dat dit in ' +
+      'onderling overleg gebeurt. ' + (nm ? 'De medespelers krijgen' : esc(disp(v.n).split(' ')[0]) + ' en de medespelers krijgen') +
+      ' een mail met jouw naam.</div>';
+    if (nm) {
+      removeNote += '<div class="note warn"><b>Let op:</b> ' + esc(disp(v.n)) + ' ontvangt <b>geen mails</b> van de app ' +
+        'en wordt dus niet verwittigd. Laat het zelf even weten.</div>';
+    }
   }
+  actions += removeNote + '<button class="btn danger" type="button" id="bRemove">' +
+    (v.me ? 'Annuleer mijn plaats' : 'Verwijder ' + esc(disp(v.n))) + '</button>';
   openSheet(html + actions + '<button class="btn ghost" type="button" id="bClose">Sluiten</button>');
   $('bClose').onclick = closeSheet;
   bindChoice('bTakeMe', function(mode){ act('apiTakeOver', [slot.k, ci, pi, v.n, D.me, mode]); });
